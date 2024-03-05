@@ -3,7 +3,7 @@
 ################################
 
 resource "random_string" "suffix" {
-  length  = 63 - length(var.identifier)
+  length  = 63 - length(var.identifier) - 1
   special = false
   upper   = false
 }
@@ -16,10 +16,7 @@ resource "aws_s3_bucket" "main" {
   bucket        = local.bucket_name
   force_destroy = true
 
-  tags = merge(
-    { "Name" = var.name },
-    var.tags
-  )
+  tags = var.tags
 }
 
 resource "aws_s3_bucket_ownership_controls" "main" {
@@ -42,6 +39,18 @@ resource "aws_s3_bucket_public_access_block" "main" {
 ################################
 # Route53                      #
 ################################
+
+# get public zone already present in account
+data "aws_route53_zone" "main" {
+  count        = var.domain != "test" ? 1 : 0
+  name         = var.domain
+  private_zone = false
+}
+
+# conditionally set the zone_id to a dummy value for unit tests to run
+locals {
+  zone_id = var.domain != "test" ? data.aws_route53_zone.main[0].id : "testzone123"
+}
 
 # Cloudfront requires the certificate to be issued in the global region (us-east-1)
 provider "aws" {
@@ -68,7 +77,7 @@ resource "aws_route53_record" "validation" {
   records         = [each.value.record]
   ttl             = 60
   type            = each.value.type
-  zone_id         = var.zone_id
+  zone_id         = local.zone_id
   provider        = aws.virginia
 }
 
@@ -132,14 +141,24 @@ resource "aws_cloudfront_distribution" "main" {
 
   viewer_certificate {
     acm_certificate_arn            = aws_acm_certificate.main.arn
-    ssl_support_method             = "sni_only"
+    ssl_support_method             = "sni-only"
     cloudfront_default_certificate = true
   }
 
-  tags = merge(
-    { "Name" = var.name },
-    var.tags
-  )
+  tags = var.tags
+}
+
+# point domain to CloudFront DNS name
+resource "aws_route53_record" "main" {
+  name    = var.domain
+  type    = "A"
+  zone_id = local.zone_id
+
+  alias {
+    name                   = aws_cloudfront_distribution.main.domain_name
+    zone_id                = aws_cloudfront_distribution.main.hosted_zone_id
+    evaluate_target_health = false
+  }
 }
 
 # give CloudFront read access to S3 bucket objects
