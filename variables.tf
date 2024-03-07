@@ -45,3 +45,9 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "test" {
+  description = "A flag for wether or not creating a test environment to conduct unit tests with."
+  type        = bool
+  default     = false
+}

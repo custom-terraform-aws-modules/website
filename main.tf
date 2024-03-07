@@ -40,16 +40,21 @@ resource "aws_s3_bucket_public_access_block" "main" {
 # Route53                      #
 ################################
 
-# get public zone already present in account
+locals {
+  sub_strings = split(".", var.domain)
+  base_domain = "${local.sub_strings[length(local.sub_strings) - 2]}.${local.sub_strings[length(local.sub_strings) - 1]}"
+}
+
+# get public zone for base domain (must be already present in account)
 data "aws_route53_zone" "main" {
-  count        = var.domain != "test" ? 1 : 0
-  name         = var.domain
+  count        = !var.test ? 1 : 0
+  name         = local.base_domain
   private_zone = false
 }
 
 # conditionally set the zone_id to a dummy value for unit tests to run
 locals {
-  zone_id = var.domain != "test" ? data.aws_route53_zone.main[0].id : "testzone123"
+  zone_id = !var.test ? data.aws_route53_zone.main[0].id : "testzone123"
 }
 
 # Cloudfront requires the certificate to be issued in the global region (us-east-1)
