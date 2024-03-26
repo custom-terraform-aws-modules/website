@@ -46,6 +46,12 @@ variable "max_ttl" {
   default     = 86400
 }
 
+variable "ip_rate_limit" {
+  description = "Rate limit for traffic from the same IP address over a time period of 5 minutes."
+  type        = number
+  default     = 0
+}
+
 variable "tags" {
   description = "A map of tags to add to all resources."
   type        = map(string)

@@ -93,6 +93,62 @@ resource "aws_acm_certificate_validation" "main" {
 }
 
 ################################
+# WAF Web ACL                  #
+################################
+
+resource "aws_wafv2_web_acl" "main" {
+  count    = var.ip_rate_limit > 0 ? 1 : 0
+  name     = "${var.identifier}-cloudfront"
+  scope    = "CLOUDFRONT"
+  provider = aws.virginia
+
+  default_action {
+    allow {}
+  }
+
+  custom_response_body {
+    key          = "blocked_request_custom_response"
+    content      = "{\n    \"error\":\"Too Many Requests.\"\n}"
+    content_type = "APPLICATION_JSON"
+  }
+
+  visibility_config {
+    cloudwatch_metrics_enabled = true
+    metric_name                = "${var.identifier}-CloudWatchBlockedTraffic"
+    sampled_requests_enabled   = true
+  }
+
+  rule {
+    name     = "${var.identifier}-CloudWatchBlockTraffic"
+    priority = 1
+
+    action {
+      block {
+        custom_response {
+          custom_response_body_key = "blocked_request_custom_response"
+          response_code            = 429
+        }
+      }
+    }
+
+    statement {
+      rate_based_statement {
+        aggregate_key_type = "IP"
+        limit              = var.ip_rate_limit
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "${var.identifier}-CloudWatchBlockTraffic"
+      sampled_requests_enabled   = true
+    }
+  }
+
+  tags = var.tags
+}
+
+################################
 # CloudFront                   #
 ################################
 
@@ -103,6 +159,7 @@ resource "aws_cloudfront_distribution" "main" {
   default_root_object = "index.html"
   aliases             = [var.domain]
   price_class         = var.price_class
+  web_acl_id          = var.ip_rate_limit > 0 ? aws_wafv2_web_acl.main[0].arn : null
 
   origin {
     origin_id   = "${local.bucket_name}-origin"
