@@ -11,9 +11,9 @@ run "invalid_identifier" {
   command = plan
 
   variables {
-    test       = true
     identifier = "ab"
     domain     = "test.com"
+    zone_id    = "test-zone"
   }
 
   expect_failures = [var.identifier]
@@ -23,9 +23,9 @@ run "valid_identifier" {
   command = plan
 
   variables {
-    test       = true
     identifier = "abc"
     domain     = "test.com"
+    zone_id    = "test-zone"
   }
 }
 
@@ -33,9 +33,9 @@ run "invalid_price_class" {
   command = plan
 
   variables {
-    test        = true
     identifier  = "abc"
     domain      = "test.com"
+    zone_id     = "test-zone"
     price_class = "FOOBAR_200"
   }
 
@@ -46,9 +46,9 @@ run "valid_price_class" {
   command = plan
 
   variables {
-    test        = true
     identifier  = "abc"
     domain      = "test.com"
+    zone_id     = "test-zone"
     price_class = "PriceClass_200"
   }
 }

@@ -12,6 +12,12 @@ variable "domain" {
   type        = string
 }
 
+variable "zone_id" {
+  description = "ID of the public hosted zone for the domain."
+  type        = string
+  default     = ""
+}
+
 variable "price_class" {
   description = "Price class for the CloudFront distribution."
   type        = string
@@ -44,10 +50,4 @@ variable "tags" {
   description = "A map of tags to add to all resources."
   type        = map(string)
   default     = {}
-}
-
-variable "test" {
-  description = "A flag for wether or not creating a test environment to conduct unit tests with."
-  type        = bool
-  default     = false
 }
